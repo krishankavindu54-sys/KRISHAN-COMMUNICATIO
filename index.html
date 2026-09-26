@@ -1,0 +1,865 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Krishan Communication POS</title>
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Dexie.js (Database) -->
+    <script src="https://unpkg.com/dexie@3.2.4/dist/dexie.js"></script>
+
+    <!-- SweetAlert2 (Alerts) -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    <!-- Chart.js (Charts) -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <!-- Favicon & PWA App Manifest -->
+    <link rel="icon" href="/favicon.ico">
+    <link rel="icon" type="image/svg+xml" href="/assets/icons/icon.svg">
+    <link rel="apple-touch-icon" href="/assets/icons/icon-192.png">
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#4f46e5">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Krishan POS">
+
+    <!-- JsBarcode (Barcode Generator) -->
+    <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
+
+    <!-- Local Offline QRCode Generator -->
+    <script src="/assets/js/qrcode.min.js"></script>
+    <script>
+        if (typeof QRCode === 'undefined') {
+            const qrScript = document.createElement('script');
+            qrScript.src = 'https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js';
+            document.head.appendChild(qrScript);
+        }
+    </script>
+
+    <!-- Socket.io (Realtime Sync Engine) -->
+    <script>
+        (function() {
+            const isLocalLan = window.location.hostname === 'localhost' || 
+                               window.location.hostname === '127.0.0.1' || 
+                               /^192\.168\./.test(window.location.hostname) || 
+                               /^10\./.test(window.location.hostname);
+            const script = document.createElement('script');
+            if (isLocalLan) {
+                script.src = '/socket.io/socket.io.js';
+                script.onerror = function() {
+                    const cdn = document.createElement('script');
+                    cdn.src = 'https://cdn.socket.io/4.7.5/socket.io.min.js';
+                    document.head.appendChild(cdn);
+                };
+            } else {
+                script.src = 'https://cdn.socket.io/4.7.5/socket.io.min.js';
+            }
+            document.head.appendChild(script);
+        })();
+    </script>
+
+    <style>
+        body {
+            font-family: 'Outfit', sans-serif;
+            background-color: #0f172a;
+            background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #1e293b 100%);
+            min-height: 100vh;
+            touch-action: manipulation;
+        }
+
+        /* Prevent auto-zoom on mobile inputs */
+        @media (max-width: 640px) {
+            input, select, textarea {
+                font-size: 16px !important;
+            }
+        }
+
+        /* Light mode translucent panels */
+        html:not(.dark) body {
+            background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 50%, #e2e8f0 100%);
+        }
+
+        /* Light mode translucent panels over background */
+        html:not(.dark) .bg-white {
+            background-color: rgba(255, 255, 255, 0.85) !important;
+        }
+
+        html:not(.dark) .bg-slate-50 {
+            background-color: rgba(248, 250, 252, 0.7) !important;
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 3px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+
+        /* Dark Mode Global Styles */
+        html.dark body {
+            background: linear-gradient(135deg, #020617 0%, #0f172a 50%, #1e1b4b 100%) !important;
+            color: #f8fafc !important;
+        }.sidebar-item {
+            transition: all 0.2s ease;
+        }
+
+        .sidebar-item:hover,
+        .sidebar-item.active {
+            background-color: #ede9fe;
+            color: #7c3aed;
+            border-right: 3px solid #7c3aed;
+        }
+
+        /* Animation classes */
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .fade-in {
+            animation: fadeIn 0.3s ease-out forwards;
+        }
+
+        .scrollbar-hide::-webkit-scrollbar {
+            display: none;
+        }
+
+        .scrollbar-hide {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+
+        /* Dark Mode Overrides */
+        html.dark body {
+            background-color: #0f172a;
+            background-image: linear-gradient(rgba(15, 23, 42, 0.8), rgba(15, 23, 42, 0.8)), url('bg.png');
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+            color: #f8fafc;
+        }
+
+        html.dark blockquote,
+        html.dark pre,
+        html.dark code {
+            background-color: rgba(30, 41, 59, 0.7) !important;
+            color: #f8fafc !important;
+        }
+
+        html.dark .bg-white {
+            background-color: rgba(30, 41, 59, 0.65) !important;
+        }
+
+        html.dark .bg-slate-50 {
+            background-color: rgba(15, 23, 42, 0.45) !important;
+        }
+
+        html.dark .bg-slate-100 {
+            background-color: #334155 !important;
+        }
+
+        html.dark .bg-slate-900 {
+            background-color: #f8fafc !important;
+            color: #0f172a !important;
+        }
+
+        html.dark .text-slate-800,
+        html.dark .text-slate-900 {
+            color: #f8fafc !important;
+        }
+
+        html.dark .text-slate-700 {
+            color: #e2e8f0 !important;
+        }
+
+        html.dark .text-slate-600 {
+            color: #cbd5e1 !important;
+        }
+
+        html.dark .text-slate-500 {
+            color: #94a3b8 !important;
+        }
+
+        html.dark .text-slate-400 {
+            color: #64748b !important;
+        }
+
+        html.dark .border-slate-100,
+        html.dark .border-gray-100 {
+            border-color: #334155 !important;
+        }
+
+        html.dark .border-slate-200 {
+            border-color: #475569 !important;
+        }
+
+        html.dark .border-slate-300 {
+            border-color: #64748b !important;
+        }
+
+        html.dark input,
+        html.dark select,
+        html.dark textarea {
+            background-color: #1e293b !important;
+            color: #f8fafc !important;
+            border-color: #475569 !important;
+        }
+
+        /* Sidebar active states and hover states overrides */
+        html.dark .sidebar-item:hover,
+        html.dark .sidebar-item.active {
+            background-color: rgba(139, 92, 246, 0.2) !important;
+            color: #a78bfa !important;
+        }
+
+        html.dark .bg-violet-50,
+        html.dark .bg-violet-100 {
+            background-color: rgba(139, 92, 246, 0.15) !important;
+            color: #c4b5fd !important;
+        }
+
+        html.dark .text-violet-600,
+        html.dark .text-violet-700 {
+            color: #a78bfa !important;
+        }
+
+        html.dark .bg-orange-50,
+        html.dark .bg-orange-100 {
+            background-color: rgba(249, 115, 22, 0.15) !important;
+            color: #fdba74 !important;
+        }
+
+        html.dark .text-orange-600,
+        html.dark .text-orange-700 {
+            color: #fb923c !important;
+        }
+
+        html.dark .bg-blue-50,
+        html.dark .bg-blue-100 {
+            background-color: rgba(59, 130, 246, 0.15) !important;
+            color: #93c5fd !important;
+        }
+
+        html.dark .text-blue-600,
+        html.dark .text-blue-700 {
+            color: #60a5fa !important;
+        }
+
+        html.dark .bg-red-50,
+        html.dark .bg-red-100 {
+            background-color: rgba(239, 68, 68, 0.15) !important;
+            color: #fca5a5 !important;
+        }
+
+        html.dark .text-red-500,
+        html.dark .text-red-600,
+        html.dark .text-red-700 {
+            color: #f87171 !important;
+        }
+
+        html.dark .bg-emerald-50,
+        html.dark .bg-emerald-100,
+        html.dark .bg-green-50,
+        html.dark .bg-green-100 {
+            background-color: rgba(16, 185, 129, 0.15) !important;
+            color: #6ee7b7 !important;
+        }
+
+        html.dark .text-emerald-600,
+        html.dark .text-emerald-700,
+        html.dark .text-green-600,
+        html.dark .text-green-700 {
+            color: #34d399 !important;
+        }
+
+        html.dark .bg-pink-100 {
+            background-color: rgba(236, 72, 153, 0.15) !important;
+            color: #f9a8d4 !important;
+        }
+
+        html.dark .text-pink-600 {
+            color: #f472b6 !important;
+        }
+
+        html.dark .bg-yellow-100 {
+            background-color: rgba(234, 179, 8, 0.15) !important;
+            color: #fde047 !important;
+        }
+
+        html.dark .text-yellow-600 {
+            color: #facc15 !important;
+        }
+
+        html.dark .bg-purple-100 {
+            background-color: rgba(168, 85, 247, 0.15) !important;
+            color: #d8b4fe !important;
+        }
+
+        html.dark .text-purple-600 {
+            color: #c084fc !important;
+        }
+
+        html.dark .bg-teal-100 {
+            background-color: rgba(20, 184, 166, 0.15) !important;
+            color: #5eead4 !important;
+        }
+
+        html.dark .text-teal-600 {
+            color: #2dd4bf !important;
+        }
+
+        html.dark .bg-cyan-100 {
+            background-color: rgba(6, 182, 212, 0.15) !important;
+            color: #67e8f9 !important;
+        }
+
+        html.dark .text-cyan-600 {
+            color: #22d3ee !important;
+        }
+
+        html.dark .bg-rose-100 {
+            background-color: rgba(225, 29, 72, 0.15) !important;
+            color: #fda4af !important;
+        }
+
+        html.dark .text-rose-600 {
+            color: #fb7185 !important;
+        }
+
+        html.dark .bg-indigo-100 {
+            background-color: rgba(99, 102, 241, 0.15) !important;
+            color: #a5b4fc !important;
+        }
+
+        html.dark .text-indigo-600 {
+            color: #818cf8 !important;
+        }
+
+        html.dark .hover\:bg-slate-50:hover {
+            background-color: #334155 !important;
+        }
+
+        html.dark .hover\:bg-slate-100:hover {
+            background-color: #475569 !important;
+        }
+
+        html.dark .hover\:bg-slate-200:hover {
+            background-color: #64748b !important;
+        }
+
+        html.dark .hover\:shadow-md:hover {
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.5) !important;
+            border-color: #a78bfa !important;
+        }
+
+        html.dark .hover\:border-violet-300:hover {
+            border-color: #8b5cf6 !important;
+        }
+
+        /* Modal background overlay */
+        html.dark #modal-overlay {
+            background-color: rgba(0, 0, 0, 0.7);
+        }
+
+        html.dark #modal-content {
+            background-color: #1e293b;
+            color: #f8fafc;
+        }
+
+        html.dark .divide-slate-100> :not([hidden])~ :not([hidden]) {
+            border-color: #334155 !important;
+        }
+
+        html.dark table thead {
+            background-color: #0f172a !important;
+            color: #f8fafc !important;
+        }
+
+        html.dark table td,
+        html.dark table th {
+            border-color: #334155 !important;
+        }
+
+        /* Sweet Alert Dark Mode Fix */
+        html.dark .swal2-popup {
+            background-color: #1e293b !important;
+            color: #f8fafc !important;
+            border: 1px solid #334155 !important;
+        }
+
+        html.dark .swal2-title,
+        html.dark .swal2-html-container {
+            color: #f8fafc !important;
+        }
+
+        html.dark .swal2-input,
+        html.dark .swal2-select,
+        html.dark .swal2-textarea {
+            background-color: #334155 !important;
+            color: #f8fafc !important;
+            border-color: #475569 !important;
+        }
+
+        html.dark .swal2-radio label {
+            color: #f8fafc !important;
+        }
+    </style>
+</head>
+
+<body class="text-slate-800 h-screen flex overflow-hidden relative z-0 antialiased selection:bg-violet-500 selection:text-white">
+
+    <!-- Mobile Sidebar Backdrop Overlay -->
+    <div id="sidebar-backdrop" onclick="app.toggleSidebar(false)"
+        class="fixed inset-0 bg-black/60 backdrop-blur-sm z-30 hidden lg:hidden transition-opacity duration-300"></div>
+
+    <!-- Sidebar (Off-canvas Drawer on mobile, Fixed on desktop) -->
+    <aside id="main-sidebar"
+        class="w-72 lg:w-64 bg-white dark:bg-slate-900 h-full flex flex-col shadow-2xl lg:shadow-xl z-40 fixed lg:relative -translate-x-full lg:translate-x-0 transition-transform duration-300 ease-in-out border-r border-slate-200/50 dark:border-slate-700/50">
+        
+        <!-- Sidebar Brand Header -->
+        <div class="p-5 sm:p-6 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="w-11 h-11 bg-gradient-to-tr from-violet-600 to-indigo-600 rounded-2xl flex items-center justify-center text-white text-xl font-bold shadow-lg shadow-violet-500/25">
+                    <i class="fa-solid fa-store"></i>
+                </div>
+                <div>
+                    <h1 class="text-base font-black text-slate-800 dark:text-slate-100 leading-tight">Krishan POS</h1>
+                    <p class="text-[11px] font-medium text-violet-600 dark:text-violet-400">Communication & Studio</p>
+                </div>
+            </div>
+            <button onclick="app.toggleSidebar(false)" class="lg:hidden w-8 h-8 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-500 flex items-center justify-center hover:text-slate-700">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+
+        <!-- Sidebar Navigation Items -->
+        <nav class="flex-1 overflow-y-auto py-3 px-2">
+            <ul class="space-y-1">
+                <li>
+                    <a href="#" onclick="app.navigate('dashboard'); app.toggleSidebar(false);" id="nav-dashboard"
+                        class="sidebar-item active flex items-center px-4 py-3 text-slate-600 dark:text-slate-300 font-bold text-sm rounded-xl transition-all gap-3 hover:bg-slate-100 dark:hover:bg-slate-800">
+                        <i class="fa-solid fa-chart-pie w-6 text-center text-base"></i>
+                        <span>Dashboard</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="#" onclick="app.navigate('pos'); app.toggleSidebar(false);" id="nav-pos"
+                        class="sidebar-item flex items-center px-4 py-3 text-slate-600 dark:text-slate-300 font-bold text-sm rounded-xl transition-all gap-3 hover:bg-slate-100 dark:hover:bg-slate-800">
+                        <i class="fa-solid fa-cash-register w-6 text-center text-base"></i>
+                        <span>New Sale (POS)</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="#" onclick="app.navigate('products'); app.toggleSidebar(false);" id="nav-products"
+                        class="sidebar-item flex items-center px-4 py-3 text-slate-600 dark:text-slate-300 font-bold text-sm rounded-xl transition-all gap-3 hover:bg-slate-100 dark:hover:bg-slate-800">
+                        <i class="fa-solid fa-boxes-stacked w-6 text-center text-base"></i>
+                        <span>Inventory</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="#" onclick="app.navigate('repairs'); app.toggleSidebar(false);" id="nav-repairs"
+                        class="sidebar-item flex items-center px-4 py-3 text-slate-600 dark:text-slate-300 font-bold text-sm rounded-xl transition-all gap-3 hover:bg-slate-100 dark:hover:bg-slate-800">
+                        <i class="fa-solid fa-screwdriver-wrench w-6 text-center text-base"></i>
+                        <span>Repairs (රෙපයාර්)</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="#" onclick="app.navigate('frames'); app.toggleSidebar(false);" id="nav-frames"
+                        class="sidebar-item flex items-center px-4 py-3 text-slate-600 dark:text-slate-300 font-bold text-sm rounded-xl transition-all gap-3 hover:bg-slate-100 dark:hover:bg-slate-800">
+                        <i class="fa-solid fa-image w-6 text-center text-base text-rose-500"></i>
+                        <span>Photo Frames (ෆ්‍රේම්)</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="#" onclick="app.navigate('sales'); app.toggleSidebar(false);" id="nav-sales"
+                        class="sidebar-item flex items-center px-4 py-3 text-slate-600 dark:text-slate-300 font-bold text-sm rounded-xl transition-all gap-3 hover:bg-slate-100 dark:hover:bg-slate-800">
+                        <i class="fa-solid fa-file-invoice-dollar w-6 text-center text-base"></i>
+                        <span>Sales History</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="#" onclick="app.navigate('reports'); app.toggleSidebar(false);" id="nav-reports"
+                        class="sidebar-item flex items-center px-4 py-3 text-slate-600 dark:text-slate-300 font-bold text-sm rounded-xl transition-all gap-3 hover:bg-slate-100 dark:hover:bg-slate-800">
+                        <i class="fa-solid fa-chart-line w-6 text-center text-base"></i>
+                        <span>Reports</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="#" onclick="app.navigate('expenses'); app.toggleSidebar(false);" id="nav-expenses"
+                        class="sidebar-item flex items-center px-4 py-3 text-slate-600 dark:text-slate-300 font-bold text-sm rounded-xl transition-all gap-3 hover:bg-slate-100 dark:hover:bg-slate-800">
+                        <i class="fa-solid fa-wallet w-6 text-center text-base"></i>
+                        <span>Expenses</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="#" onclick="app.navigate('credits'); app.toggleSidebar(false);" id="nav-credits"
+                        class="sidebar-item flex items-center px-4 py-3 text-slate-600 dark:text-slate-300 font-bold text-sm rounded-xl transition-all gap-3 hover:bg-slate-100 dark:hover:bg-slate-800">
+                        <i class="fa-solid fa-book-open w-6 text-center text-base"></i>
+                        <span>Credit Book</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="#" onclick="app.navigate('utility'); app.toggleSidebar(false);" id="nav-utility"
+                        class="sidebar-item flex items-center px-4 py-3 text-slate-600 dark:text-slate-300 font-bold text-sm rounded-xl transition-all gap-3 hover:bg-slate-100 dark:hover:bg-slate-800">
+                        <i class="fa-solid fa-file-invoice w-6 text-center text-base text-emerald-600"></i>
+                        <span>Utility Bills</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="#" onclick="app.navigate('bank'); app.toggleSidebar(false);" id="nav-bank"
+                        class="sidebar-item flex items-center px-4 py-3 text-slate-600 dark:text-slate-300 font-bold text-sm rounded-xl transition-all gap-3 hover:bg-slate-100 dark:hover:bg-slate-800">
+                        <i class="fa-solid fa-building-columns w-6 text-center text-base text-blue-600"></i>
+                        <span>Bank Tracker</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="#" onclick="app.navigate('suppliers'); app.toggleSidebar(false);" id="nav-suppliers"
+                        class="sidebar-item flex items-center px-4 py-3 text-slate-600 dark:text-slate-300 font-bold text-sm rounded-xl transition-all gap-3 hover:bg-slate-100 dark:hover:bg-slate-800">
+                        <i class="fa-solid fa-truck-field w-6 text-center text-base text-orange-600"></i>
+                        <span>Suppliers</span>
+                    </a>
+                </li>
+                <li id="sidebar-users-item">
+                    <a href="#" onclick="app.navigate('users'); app.toggleSidebar(false);" id="nav-users"
+                        class="sidebar-item flex items-center px-4 py-3 text-slate-600 dark:text-slate-300 font-bold text-sm rounded-xl transition-all gap-3 hover:bg-slate-100 dark:hover:bg-slate-800">
+                        <i class="fa-solid fa-users-gear w-6 text-center text-base text-purple-600"></i>
+                        <span>User Accounts</span>
+                    </a>
+                </li>
+                <li id="sidebar-customer-catalog-item">
+                    <a href="catalog.html" target="_blank" id="nav-customer-catalog"
+                        class="sidebar-item flex items-center px-4 py-3 text-emerald-700 dark:text-emerald-400 font-bold text-sm rounded-xl transition-all gap-3 hover:bg-emerald-50 dark:hover:bg-emerald-950/40">
+                        <i class="fa-solid fa-book-open w-6 text-center text-base text-emerald-600"></i>
+                        <span>Item Catalog (මිල ලැයිස්තුව)</span>
+                    </a>
+                </li>
+                <li id="sidebar-whatsapp-item">
+                    <a href="#" onclick="app.openWhatsAppManagerModal(); app.toggleSidebar(false);" id="nav-whatsapp"
+                        class="sidebar-item flex items-center px-4 py-3 text-emerald-700 dark:text-emerald-400 font-bold text-sm rounded-xl transition-all gap-3 hover:bg-emerald-50 dark:hover:bg-emerald-950/40">
+                        <i class="fa-brands fa-whatsapp w-6 text-center text-base text-emerald-600"></i>
+                        <span>WhatsApp POS</span>
+                        <span id="sidebar-whatsapp-status-badge" class="ml-auto text-[10px] px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 font-bold">Connect</span>
+                    </a>
+                </li>
+            </ul>
+        </nav>
+
+        <div class="p-4 border-t border-slate-100 dark:border-slate-800">
+            <button onclick="app.exportData()"
+                class="w-full bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 py-2.5 rounded-xl text-xs font-bold transition-colors flex items-center justify-center gap-2">
+                <i class="fa-solid fa-download"></i> Backup Data
+            </button>
+        </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="flex-1 h-full overflow-hidden flex flex-col relative bg-transparent">
+        <!-- Top Responsive Header -->
+        <header
+            class="h-16 bg-white/95 dark:bg-slate-900/95 backdrop-blur shadow-sm flex items-center justify-between px-3 sm:px-6 z-10 border-b border-slate-200/50 dark:border-slate-700/50">
+            
+            <!-- Left: Mobile Hamburger & Date/Time -->
+            <div class="flex items-center gap-3">
+                <button onclick="app.toggleSidebar()"
+                    class="lg:hidden w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-700 dark:text-slate-200 flex items-center justify-center transition-all shadow-sm" title="Open Menu">
+                    <i class="fa-solid fa-bars text-lg"></i>
+                </button>
+                <div class="flex flex-col leading-tight">
+                    <span id="current-date" class="text-slate-500 dark:text-slate-400 text-[11px] font-medium hidden sm:inline"></span>
+                    <span id="current-time" class="text-slate-800 dark:text-slate-200 text-sm sm:text-base font-bold"></span>
+                </div>
+                <div onclick="app.editShopProfile()" class="hidden md:flex items-center gap-2 rounded-full bg-violet-50 dark:bg-violet-900/20 hover:bg-violet-100 border border-violet-100 dark:border-violet-800/40 px-3 py-1 cursor-pointer transition-colors" title="Click to edit shop details">
+                    <i class="fa-solid fa-shop text-violet-600 text-xs"></i>
+                    <span id="shop-profile-name" class="text-xs font-bold text-violet-700 dark:text-violet-300">Krishan Communication</span>
+                </div>
+            </div>
+
+            <!-- Right Header Actions -->
+            <div class="flex items-center gap-2 sm:gap-3">
+                <!-- Realtime Live Sync Status Badge -->
+                <div id="realtime-sync-widget" onclick="app.showSyncStatusModal()" class="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 text-xs font-bold cursor-pointer transition-all hover:scale-105 shadow-sm" title="Realtime Live Sync: Connected. Click to view details.">
+                    <span class="relative flex h-2 w-2">
+                        <span id="sync-pulse" class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                        <span id="sync-dot" class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                    </span>
+                    <span id="sync-status-text" class="hidden sm:inline">Live</span>
+                    <span id="sync-device-badge" class="px-1.5 py-0.2 rounded-full bg-emerald-200/60 dark:bg-emerald-800/60 text-[10px]" title="Connected Devices">1</span>
+                </div>
+
+                <!-- Customer Items Catalog Button -->
+                <a href="catalog.html" target="_blank" id="customer-catalog-btn"
+                    class="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-600/10 hover:bg-emerald-600/20 text-emerald-700 dark:text-emerald-300 border border-emerald-300/80 dark:border-emerald-700/80 text-xs font-bold transition-all shadow-sm active:scale-95 cursor-pointer" title="View Customer Product & Price Catalog">
+                    <i class="fa-solid fa-book-open text-sm text-emerald-600 dark:text-emerald-400"></i>
+                    <span class="hidden sm:inline">Catalog</span>
+                </a>
+
+                <!-- Direct WhatsApp 1-Shot Gateway Button -->
+                <button id="whatsapp-header-btn" onclick="app.openWhatsAppManagerModal()"
+                    class="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-600/10 hover:bg-emerald-600/20 text-emerald-700 dark:text-emerald-300 border border-emerald-300/80 dark:border-emerald-700/80 text-xs font-bold transition-all shadow-sm active:scale-95 cursor-pointer" title="WhatsApp 1-Shot Direct Connection & Settings">
+                    <i class="fa-brands fa-whatsapp text-sm text-emerald-600 dark:text-emerald-400"></i>
+                    <span id="whatsapp-header-dot" class="inline-block w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
+                    <span id="whatsapp-header-label" class="hidden sm:inline">WhatsApp</span>
+                </button>
+
+                <!-- Manual Sync Action Button -->
+                <button id="manual-sync-btn" onclick="app.triggerManualSync()"
+                    class="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-slate-100 dark:bg-slate-800 hover:bg-violet-50 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 hover:text-violet-600 flex items-center justify-center border border-slate-200/60 dark:border-slate-700 transition-all shadow-sm" title="Sync All Data with Server">
+                    <i id="manual-sync-icon" class="fa-solid fa-arrows-rotate text-sm"></i>
+                </button>
+
+                <!-- Install Mobile App PWA Button -->
+                <button id="pwa-install-header-btn" onclick="app.promptPwaInstall()"
+                    class="inline-flex items-center gap-1.5 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white px-2.5 sm:px-3 py-1.5 rounded-full text-xs font-bold shadow-md shadow-emerald-500/20 transition-all active:scale-95" title="Install App to Home Screen">
+                    <i class="fa-solid fa-mobile-screen-button"></i>
+                    <span>Install App</span>
+                </button>
+
+                <button onclick="app.toggleDarkMode()"
+                    class="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-600 dark:text-slate-300 flex items-center justify-center border border-slate-200/60 dark:border-slate-700 transition-all shadow-sm" title="Toggle Theme">
+                    <i id="theme-icon" class="fa-solid fa-moon text-sm"></i>
+                </button>
+
+                <button onclick="app.navigate('pos'); showCamera();"
+                    class="hidden sm:inline-flex items-center gap-1.5 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white px-3.5 py-2 rounded-xl text-xs font-bold shadow-md shadow-violet-500/20 transition-all active:scale-95">
+                    <i class="fa-solid fa-plus"></i> New Sale
+                </button>
+
+                <!-- User Profile & Logout Widget -->
+                <div class="flex items-center gap-1.5 sm:gap-2 pl-1 sm:pl-2 border-l border-slate-200 dark:border-slate-700">
+                    <div class="flex items-center gap-2 px-2.5 py-1 rounded-full bg-slate-100 dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700">
+                        <div class="w-6 h-6 rounded-full bg-violet-600 text-white flex items-center justify-center text-[10px] font-bold" id="user-avatar-initials">
+                            A
+                        </div>
+                        <span id="user-display-name" class="text-xs font-bold text-slate-800 dark:text-slate-200 max-w-[80px] truncate hidden sm:inline">Admin</span>
+                    </div>
+                    <button onclick="app.logout()" class="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-red-50 dark:bg-red-900/30 hover:bg-red-100 text-red-600 dark:text-red-400 flex items-center justify-center border border-red-200/60 dark:border-red-800/40 transition-all" title="Logout">
+                        <i class="fa-solid fa-right-from-bracket text-xs sm:text-sm"></i>
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Dynamic Content Area (with responsive padding and mobile bottom margin) -->
+        <div id="app-content" class="flex-1 overflow-y-auto p-3 sm:p-6 lg:p-8 pb-20 lg:pb-8 relative">
+            <div class="grid grid-cols-1 xl:grid-cols-3 gap-8 mb-10 fade-in">
+                <div class="bg-gradient-to-br from-violet-500 to-indigo-600 p-8 rounded-3xl shadow-xl shadow-violet-200 text-white flex flex-col justify-between min-h-[160px]">
+                    <div class="flex justify-between items-start mb-4">
+                        <p class="text-violet-100 font-bold text-lg">Total Sales Today</p>
+                        <div class="bg-white/20 p-3.5 rounded-xl shadow-sm">
+                            <i class="fa-solid fa-coins text-3xl"></i>
+                        </div>
+                    </div>
+                    <h2 class="text-5xl font-black tracking-tight">LKR 0.00</h2>
+                </div>
+
+                <div onclick="app.navigate('repairs')" class="bg-white dark:bg-slate-800 p-8 rounded-3xl shadow-sm border border-slate-200 dark:border-slate-700 flex flex-col justify-between min-h-[160px] cursor-pointer hover:border-orange-400 dark:hover:border-orange-500 hover:shadow-md transition active:scale-98 group" title="Click to view all repairs (රෙපයාර් ලැයිස්තුව බලන්න)">
+                    <div class="flex justify-between items-start mb-4">
+                        <div>
+                            <p class="text-slate-500 dark:text-slate-400 font-bold text-lg group-hover:text-orange-600 transition-colors">Pending Repairs</p>
+                            <span class="text-xs text-orange-500 font-bold">භාරගත් රෙපයාර් &rarr;</span>
+                        </div>
+                        <div class="bg-orange-50 text-orange-600 group-hover:bg-orange-600 group-hover:text-white transition-all p-3.5 rounded-xl border border-orange-100 shadow-sm">
+                            <i class="fa-solid fa-screwdriver-wrench text-3xl"></i>
+                        </div>
+                    </div>
+                    <div class="flex items-baseline justify-between">
+                        <h2 class="text-5xl font-black text-slate-800 dark:text-slate-100 tracking-tight">0</h2>
+                        <span class="text-xs font-bold text-violet-600 dark:text-violet-400 group-hover:underline">View All &rarr;</span>
+                    </div>
+                </div>
+
+                <div class="bg-white dark:bg-slate-800 p-8 rounded-3xl shadow-sm border border-slate-200 dark:border-slate-700 flex flex-col justify-between min-h-[160px]">
+                    <div class="flex justify-between items-start mb-4">
+                        <p class="text-slate-500 dark:text-slate-400 font-bold text-lg">Low Stock Items</p>
+                        <div class="bg-red-50 text-red-600 p-3.5 rounded-xl border border-red-100 shadow-sm">
+                            <i class="fa-solid fa-triangle-exclamation text-3xl"></i>
+                        </div>
+                    </div>
+                    <h2 class="text-5xl font-black text-red-600 tracking-tight">0</h2>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 xl:grid-cols-2 gap-8 fade-in h-full pb-10" style="animation-delay: 0.1s">
+                <!-- Recent Sales -->
+                <div class="bg-white dark:bg-slate-800 p-8 rounded-3xl shadow-sm border border-slate-200 dark:border-slate-700">
+                    <div class="flex justify-between items-center mb-6">
+                        <h3 class="font-black text-xl text-slate-800 dark:text-slate-100"><i class="fa-solid fa-clock-rotate-left mr-2 text-violet-600"></i> Recent Sales</h3>
+                        <button onclick="app.navigate('sales')" class="text-sm font-bold text-violet-600 hover:text-violet-800 transition-colors">View All &rarr;</button>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-base text-left">
+                            <thead class="text-sm text-slate-500 uppercase bg-slate-50 dark:bg-slate-900/50 font-extrabold tracking-wider">
+                                <tr>
+                                    <th class="px-5 py-4 rounded-tl-xl border-b border-slate-100 dark:border-slate-700">Time</th>
+                                    <th class="px-5 py-4 border-b border-slate-100 dark:border-slate-700">Sale ID</th>
+                                    <th class="px-5 py-4 border-b border-slate-100 dark:border-slate-700">Total</th>
+                                    <th class="px-5 py-4 rounded-tr-xl border-b border-slate-100 dark:border-slate-700">Method</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr><td colspan="4" class="px-5 py-10 text-center text-slate-400 font-medium text-lg">No sales yet today</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Quick Actions -->
+                <div class="bg-white dark:bg-slate-800 p-8 rounded-3xl shadow-sm border border-slate-200 dark:border-slate-700">
+                    <h3 class="font-black text-xl mb-6 text-slate-800 dark:text-slate-100"><i class="fa-solid fa-bolt mr-2 text-violet-600"></i> Quick Actions</h3>
+                    <div class="grid grid-cols-2 md:grid-cols-3 gap-6 h-full pb-4">
+                        <button onclick="app.navigate('pos')" class="p-6 bg-violet-50 hover:bg-violet-100 rounded-2xl text-violet-700 transition flex flex-col items-center justify-center gap-3 border border-violet-100 shadow-sm hover:-translate-y-1 hover:shadow-md min-h-[140px]">
+                            <i class="fa-solid fa-cash-register text-5xl mb-2"></i>
+                            <span class="font-bold text-lg">New Sale</span>
+                        </button>
+                        <button onclick="app.openRepairModal()" class="p-6 bg-orange-50 hover:bg-orange-100 rounded-2xl text-orange-700 transition flex flex-col items-center justify-center gap-3 border border-orange-100 shadow-sm hover:-translate-y-1 hover:shadow-md min-h-[140px]">
+                            <i class="fa-solid fa-tools text-5xl mb-2"></i>
+                            <span class="font-bold text-lg">New Repair</span>
+                        </button>
+                        <button onclick="app.navigate('products')" class="p-6 bg-blue-50 hover:bg-blue-100 rounded-2xl text-blue-700 transition flex flex-col items-center justify-center gap-3 border border-blue-100 shadow-sm hover:-translate-y-1 hover:shadow-md min-h-[140px]">
+                            <i class="fa-solid fa-box-open text-5xl mb-2"></i>
+                            <span class="font-bold text-lg">Add Stock</span>
+                        </button>
+                        <button onclick="app.openExpenseModal()" class="p-6 bg-red-50 hover:bg-red-100 rounded-2xl text-red-700 transition flex flex-col items-center justify-center gap-3 border border-red-100 shadow-sm hover:-translate-y-1 hover:shadow-md min-h-[140px]">
+                             <i class="fa-solid fa-receipt text-5xl mb-2"></i>
+                            <span class="font-bold text-lg">Log Expense</span>
+                        </button>
+                        <button onclick="app.navigate('utility')" class="p-6 bg-emerald-50 hover:bg-emerald-100 rounded-2xl text-emerald-700 transition flex flex-col items-center justify-center gap-3 border border-emerald-100 shadow-sm hover:-translate-y-1 hover:shadow-md min-h-[140px]">
+                             <i class="fa-solid fa-bolt-lightning text-5xl mb-2"></i>
+                            <span class="font-bold text-lg">Utility Pay</span>
+                        </button>
+                        <button onclick="app.navigate('bank')" class="p-6 bg-blue-50 hover:bg-blue-100 rounded-2xl text-blue-700 transition flex flex-col items-center justify-center gap-3 border border-blue-100 shadow-sm hover:-translate-y-1 hover:shadow-md min-h-[140px]">
+                             <i class="fa-solid fa-building-columns text-5xl mb-2"></i>
+                            <span class="font-bold text-lg">Bank Tracker</span>
+                        </button>
+                        <button onclick="app.navigate('suppliers')" class="p-6 bg-orange-50 hover:bg-orange-100 rounded-2xl text-orange-700 transition flex flex-col items-center justify-center gap-3 border border-orange-100 shadow-sm hover:-translate-y-1 hover:shadow-md min-h-[140px]">
+                             <i class="fa-solid fa-truck-field text-5xl mb-2"></i>
+                            <span class="font-bold text-lg">Suppliers</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Mobile Bottom Quick Navigation Bar (Shown only on small screens) -->
+        <nav class="lg:hidden fixed bottom-0 left-0 right-0 z-30 bg-white/95 dark:bg-slate-900/95 backdrop-blur border-t border-slate-200 dark:border-slate-800 py-1.5 px-3 flex items-center justify-around shadow-lg">
+            <button onclick="app.navigate('dashboard')" class="flex flex-col items-center gap-1 text-slate-500 dark:text-slate-400 hover:text-violet-600 focus:text-violet-600 py-1 px-2">
+                <i class="fa-solid fa-chart-pie text-lg"></i>
+                <span class="text-[10px] font-bold">Home</span>
+            </button>
+            <button onclick="app.navigate('pos')" class="flex flex-col items-center gap-1 -mt-5 bg-gradient-to-tr from-violet-600 to-indigo-600 text-white p-3 rounded-2xl shadow-lg shadow-violet-500/30 active:scale-95 transition-all">
+                <i class="fa-solid fa-cash-register text-lg"></i>
+                <span class="text-[10px] font-black uppercase">POS</span>
+            </button>
+            <button onclick="app.navigate('products')" class="flex flex-col items-center gap-1 text-slate-500 dark:text-slate-400 hover:text-violet-600 focus:text-violet-600 py-1 px-2">
+                <i class="fa-solid fa-boxes-stacked text-lg"></i>
+                <span class="text-[10px] font-bold">Items</span>
+            </button>
+            <button onclick="app.navigate('repairs')" class="flex flex-col items-center gap-1 text-slate-500 dark:text-slate-400 hover:text-violet-600 focus:text-violet-600 py-1 px-2">
+                <i class="fa-solid fa-screwdriver-wrench text-lg"></i>
+                <span class="text-[10px] font-bold">Repairs</span>
+            </button>
+            <button onclick="app.toggleSidebar(true)" class="flex flex-col items-center gap-1 text-slate-500 dark:text-slate-400 hover:text-violet-600 focus:text-violet-600 py-1 px-2">
+                <i class="fa-solid fa-ellipsis text-lg"></i>
+                <span class="text-[10px] font-bold">More</span>
+            </button>
+        </nav>
+    </main>
+
+    <!-- Generic Modal Container (Responsive) -->
+    <div id="modal-overlay"
+        class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-3 sm:p-4">
+        <div id="modal-content"
+            class="bg-white dark:bg-slate-800 rounded-3xl shadow-2xl w-full max-w-2xl max-h-[92vh] overflow-y-auto transform transition-all scale-95 opacity-0 border border-slate-200 dark:border-slate-700">
+            <!-- Modal content injected here -->
+        </div>
+    </div>
+
+    <!-- Supabase CDN Script -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <!-- QRCode Generator Script -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+
+    <!-- Supabase Client Initialization (Optional) -->
+    <script>
+        (function() {
+            const customUrl = localStorage.getItem('krishan_pos_supabase_url');
+            const customKey = localStorage.getItem('krishan_pos_supabase_key');
+            if (customUrl && customKey && window.supabase && typeof window.supabase.createClient === 'function') {
+                try {
+                    window.supabaseClient = window.supabase.createClient(customUrl, customKey);
+                    window.supabase = window.supabaseClient;
+                } catch (e) {
+                    window.supabase = null;
+                }
+            } else {
+                window.supabase = null;
+            }
+        })();
+    </script>
+
+    <!-- Service Worker & PWA Install Prompt Registration -->
+    <script>
+        let deferredPrompt = null;
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js?v=2.0.2', { scope: '/' })
+                    .then((reg) => console.log('✔ [PWA] Service Worker registered with scope:', reg.scope))
+                    .catch((err) => console.log('ℹ [PWA] Service Worker registration skipped (standalone or direct file):', err.message));
+            });
+        }
+
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            window.pwaInstallPrompt = e;
+            console.log('📱 [PWA] Install prompt captured and ready.');
+            // Trigger UI update if app is initialized
+            if (window.app && typeof window.app.showPwaInstallButton === 'function') {
+                window.app.showPwaInstallButton();
+            }
+        });
+    </script>
+
+    <!-- Scripts -->
+    <script src="app.js?v=2.0.2"></script>
+</body>
+
+</html>

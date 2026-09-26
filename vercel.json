@@ -1,0 +1,22 @@
+{
+  "version": 2,
+  "rewrites": [
+    {
+      "source": "/api/(.*)",
+      "destination": "/api/index.js"
+    },
+    {
+      "source": "/login",
+      "destination": "/login.html"
+    },
+    {
+      "source": "/catalog",
+      "destination": "/catalog.html"
+    },
+    {
+      "source": "/menu",
+      "destination": "/catalog.html"
+    }
+  ]
+}
+

@@ -1,0 +1,31 @@
+# Dependencies
+node_modules/
+
+# Environment Variables
+.env
+.env.local
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# SQLite temp journals
+*.sqlite-journal
+*.sqlite-wal
+*.sqlite-shm
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Temporary upload bundles
+github-upload/
+*.zip
+
+# WhatsApp Auth Credentials
+data/whatsapp_auth/
+whatsapp_auth/
+
+

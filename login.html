@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Krishan POS - Login</title>
+    <!-- Favicon & PWA -->
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🏪</text></svg>">
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#4f46e5">
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+
+    <!-- SweetAlert2 -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    <style>
+        body {
+            font-family: 'Outfit', sans-serif;
+            background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #311042 100%);
+            min-height: 100vh;
+            touch-action: manipulation;
+        }
+
+        .glass-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.35);
+        }
+
+        .glow-effect {
+            box-shadow: 0 0 40px rgba(124, 58, 237, 0.35);
+        }
+
+        @keyframes floatSlow {
+            0%, 100% { transform: translateY(0px) rotate(0deg); }
+            50% { transform: translateY(-10px) rotate(1deg); }
+        }
+
+        .floating-badge {
+            animation: floatSlow 4s ease-in-out infinite;
+        }
+
+        /* Prevent auto-zoom on iOS safari input focus */
+        input, select, textarea, button {
+            font-size: 16px !important;
+        }
+        @media (min-width: 640px) {
+            input, select, textarea, button {
+                font-size: 14px !important;
+            }
+        }
+    </style>
+</head>
+
+<body class="flex items-center justify-center p-3 sm:p-6 min-h-screen relative overflow-x-hidden antialiased">
+
+    <!-- Decorative background blobs -->
+    <div class="absolute -top-32 -left-32 w-72 sm:w-96 h-72 sm:h-96 bg-violet-600/30 rounded-full blur-3xl pointer-events-none"></div>
+    <div class="absolute -bottom-32 -right-32 w-72 sm:w-96 h-72 sm:h-96 bg-fuchsia-600/20 rounded-full blur-3xl pointer-events-none"></div>
+
+    <div class="w-full max-w-md relative z-10 my-auto">
+        <!-- Main Login Card -->
+        <div class="glass-card rounded-3xl p-6 sm:p-10 glow-effect">
+            
+            <!-- Branding Header -->
+            <div class="text-center mb-8">
+                <div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-tr from-violet-600 to-indigo-600 text-white text-2xl shadow-lg shadow-violet-500/30 mb-4 floating-badge">
+                    <i class="fa-solid fa-cash-register"></i>
+                </div>
+                <h1 class="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">Krishan POS</h1>
+                <p class="text-sm font-medium text-violet-600 mt-1">Communication & Studio</p>
+                <p class="text-xs text-slate-400 mt-1">Sign in to access the Point of Sale System</p>
+            </div>
+
+            <!-- Login Form -->
+            <form id="loginForm" class="space-y-5" onsubmit="handleLogin(event)">
+                
+                <!-- Username Input -->
+                <div>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-2">
+                        <i class="fa-solid fa-user text-violet-600 mr-1.5"></i> Username
+                    </label>
+                    <div class="relative">
+                        <input type="text" id="username" required autocomplete="username" autofocus
+                            class="w-full px-4 py-3.5 pl-11 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 placeholder-slate-400 font-medium focus:outline-none focus:ring-2 focus:ring-violet-500 focus:bg-white transition-all text-sm"
+                            placeholder="Enter your username">
+                        <i class="fa-solid fa-at absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
+                    </div>
+                </div>
+
+                <!-- Password Input -->
+                <div>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-2">
+                        <i class="fa-solid fa-lock text-violet-600 mr-1.5"></i> Password
+                    </label>
+                    <div class="relative">
+                        <input type="password" id="password" required autocomplete="current-password"
+                            class="w-full px-4 py-3.5 pl-11 pr-12 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 placeholder-slate-400 font-medium focus:outline-none focus:ring-2 focus:ring-violet-500 focus:bg-white transition-all text-sm"
+                            placeholder="••••••••">
+                        <i class="fa-solid fa-key absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
+                        <button type="button" onclick="togglePasswordVisibility()"
+                            class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-1.5 focus:outline-none">
+                            <i id="eyeIcon" class="fa-solid fa-eye text-sm"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Quick Auto-Login Banner -->
+                <div id="quickLoginBanner" class="hidden bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-bold px-4 py-3 rounded-xl flex items-center justify-center gap-2 animate-pulse">
+                    <i class="fa-solid fa-bolt text-emerald-500"></i>
+                    <span>Auto-signing in...</span>
+                </div>
+
+                <!-- Error Message Banner -->
+                <div id="errorBanner" class="hidden bg-red-50 border border-red-200 text-red-600 text-xs font-semibold px-4 py-3 rounded-xl flex items-center gap-2">
+                    <i class="fa-solid fa-triangle-exclamation"></i>
+                    <span id="errorMessage">Invalid credentials</span>
+                </div>
+
+                <!-- Submit Button -->
+                <button type="submit" id="submitBtn"
+                    class="w-full py-3.5 px-4 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white font-bold rounded-xl shadow-lg shadow-violet-500/25 transition-all transform active:scale-[0.98] flex items-center justify-center gap-2 text-sm">
+                    <span id="btnText">Sign In to POS</span>
+                    <i id="btnIcon" class="fa-solid fa-arrow-right"></i>
+                </button>
+            </form>
+
+            <!-- 1-Tap Quick Login Options -->
+            <div class="mt-6 pt-5 border-t border-slate-100 space-y-2.5">
+                <p class="text-[11px] font-bold uppercase tracking-wider text-slate-400 text-center">
+                    <i class="fa-solid fa-bolt text-emerald-500 mr-1"></i> Quick 1-Tap Access
+                </p>
+                <div class="grid grid-cols-2 gap-2">
+                    <button type="button" onclick="quickLoginAs('cashier')"
+                        class="p-2.5 rounded-xl bg-violet-50 hover:bg-violet-100 border border-violet-100 text-violet-700 text-xs font-bold transition-all flex items-center justify-center gap-1.5 shadow-sm active:scale-95">
+                        <i class="fa-solid fa-cash-register text-violet-600"></i>
+                        <span>Cashier Login</span>
+                    </button>
+                    <button type="button" onclick="quickLoginAs('admin')"
+                        class="p-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-700 text-xs font-bold transition-all flex items-center justify-center gap-1.5 shadow-sm active:scale-95">
+                        <i class="fa-solid fa-shield-halved text-slate-600"></i>
+                        <span>Admin Login</span>
+                    </button>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Footer Notice -->
+        <p class="text-center text-xs text-slate-400 mt-6 font-medium">
+            Krishan Communication POS &copy; 2026. Secure Offline & Online Database.
+        </p>
+    </div>
+
+    <script>
+        function getApiBase() {
+            const saved = localStorage.getItem('krishan_pos_custom_server_url');
+            if (saved && saved.trim()) {
+                return saved.trim().replace(/\/+$/, '');
+            }
+            if (window.location.protocol === 'file:' || (window.location.port !== '3000' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'))) {
+                return 'http://localhost:3000';
+            }
+            return '';
+        }
+
+        function togglePasswordVisibility() {
+            const passInput = document.getElementById('password');
+            const eyeIcon = document.getElementById('eyeIcon');
+            if (passInput.type === 'password') {
+                passInput.type = 'text';
+                eyeIcon.classList.remove('fa-eye');
+                eyeIcon.classList.add('fa-eye-slash');
+            } else {
+                passInput.type = 'password';
+                eyeIcon.classList.remove('fa-eye-slash');
+                eyeIcon.classList.add('fa-eye');
+            }
+        }
+
+        function fillDefaultAdmin() {
+            document.getElementById('username').value = 'admin';
+            document.getElementById('password').value = 'admin123';
+            document.getElementById('password').focus();
+        }
+
+        // Detect if opened via file:// protocol
+        if (window.location.protocol === 'file:') {
+            window.addEventListener('DOMContentLoaded', () => {
+                const notice = document.createElement('div');
+                notice.className = 'mb-4 p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-200 text-xs text-center leading-relaxed';
+                notice.innerHTML = `
+                    <div class="font-bold text-amber-300 mb-1 flex items-center justify-center gap-1.5">
+                        <i class="fa-solid fa-circle-info"></i> Direct File Mode Detected
+                    </div>
+                    <div>Please open the system via 
+                        <a href="http://localhost:3000" target="_blank" class="underline font-bold text-amber-300 hover:text-white">http://localhost:3000</a> 
+                        after starting the server.
+                    </div>
+                `;
+                const card = document.querySelector('.glass-card');
+                if (card) card.prepend(notice);
+            });
+        }
+
+        async function handleLogin(e) {
+            e.preventDefault();
+            const username = document.getElementById('username').value.trim();
+            const password = document.getElementById('password').value.trim();
+            const submitBtn = document.getElementById('submitBtn');
+            const btnText = document.getElementById('btnText');
+            const btnIcon = document.getElementById('btnIcon');
+            const errorBanner = document.getElementById('errorBanner');
+            const errorMessage = document.getElementById('errorMessage');
+
+            if (!username || !password) return;
+
+            errorBanner.classList.add('hidden');
+            submitBtn.disabled = true;
+            btnText.textContent = 'Authenticating...';
+            btnIcon.className = 'fa-solid fa-spinner fa-spin';
+
+            const apiBase = getApiBase();
+            let authenticatedUser = null;
+
+            try {
+                // 1. Try Backend Authentication
+                let backendSuccess = false;
+                try {
+                    const res = await fetch(`${apiBase}/api/auth/login`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        credentials: 'include',
+                        body: JSON.stringify({ username, password })
+                    });
+
+                    const data = await res.json().catch(() => ({}));
+
+                    if (res.ok && data.success) {
+                        authenticatedUser = data.user;
+                        if (data.token) {
+                            localStorage.setItem('pos_token', data.token);
+                        }
+                        backendSuccess = true;
+                    } else if (res.status === 400 || res.status === 401) {
+                        throw new Error(data.message || 'Invalid username or password.');
+                    }
+                } catch (apiErr) {
+                    if (apiErr.message === 'Invalid username or password.') {
+                        throw apiErr;
+                    }
+                    // If network failed (e.g. GitHub Pages or Offline Mode), fallback to local offline auth
+                    console.log('Backend unreachable, attempting offline authentication...');
+                    if (username.toLowerCase() === 'admin' && password === 'admin123') {
+                        authenticatedUser = { id: 1, username: 'admin', role: 'admin', name: 'Administrator' };
+                    } else if (username.toLowerCase() === 'cashier' && password === 'cashier123') {
+                        authenticatedUser = { id: 2, username: 'cashier', role: 'cashier', name: 'Cashier' };
+                    } else {
+                        const localUsers = JSON.parse(localStorage.getItem('pos_registered_users') || '[]');
+                        const found = localUsers.find(u => u.username.toLowerCase() === username.toLowerCase() && u.password === password);
+                        if (found) {
+                            authenticatedUser = { id: found.id, username: found.username, role: found.role || 'cashier', name: found.name };
+                        } else {
+                            throw new Error('Invalid username or password.');
+                        }
+                    }
+                }
+
+                if (!authenticatedUser) {
+                    throw new Error('Invalid username or password.');
+                }
+
+                // Save session in local storage
+                localStorage.setItem('pos_current_user', JSON.stringify(authenticatedUser));
+
+                // Success toast & redirect
+                Swal.fire({
+                    toast: true,
+                    position: 'top-end',
+                    icon: 'success',
+                    title: `Welcome back, ${authenticatedUser.name || authenticatedUser.username}!`,
+                    showConfirmButton: false,
+                    timer: 1200
+                });
+
+                setTimeout(() => {
+                    window.location.href = 'index.html';
+                }, 600);
+
+            } catch (err) {
+                let msg = err.message || 'Login failed';
+                errorMessage.textContent = msg;
+                errorBanner.classList.remove('hidden');
+                submitBtn.disabled = false;
+                btnText.textContent = 'Sign In to POS';
+                btnIcon.className = 'fa-solid fa-arrow-right';
+            }
+        }
+
+        function quickLoginAs(role) {
+            const userIn = document.getElementById('username');
+            const passIn = document.getElementById('password');
+            if (role === 'admin') {
+                userIn.value = 'admin';
+                passIn.value = 'admin123';
+            } else {
+                userIn.value = 'cashier';
+                passIn.value = 'cashier123';
+            }
+            const form = document.getElementById('loginForm');
+            if (form) {
+                form.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
+            }
+        }
+
+        // Check URL for ?quick=cashier or ?quick=admin (from QR code scan)
+        (function handleQrQuickLogin() {
+            try {
+                const urlParams = new URLSearchParams(window.location.search);
+                const quick = urlParams.get('quick') || urlParams.get('autologin');
+                if (quick === 'cashier' || quick === 'admin') {
+                    const banner = document.getElementById('quickLoginBanner');
+                    if (banner) banner.classList.remove('hidden');
+                    setTimeout(() => quickLoginAs(quick), 250);
+                    return true;
+                }
+            } catch (e) {}
+            return false;
+        })();
+
+        // If already logged in, redirect automatically (only if not doing quick-login)
+        (async function checkExistingSession() {
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.get('quick') || urlParams.get('autologin')) return;
+
+            try {
+                const apiBase = getApiBase();
+                const res = await fetch(`${apiBase}/api/auth/me`, { credentials: 'include' });
+                const data = await res.json();
+                if (res.ok && data.authenticated) {
+                    window.location.href = 'index.html';
+                }
+            } catch (e) {
+                // Check local storage session
+                const saved = localStorage.getItem('pos_current_user');
+                if (saved) {
+                    window.location.href = 'index.html';
+                }
+            }
+        })();
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,49 @@
+{
+  "name": "Krishan Communication & Studio POS",
+  "short_name": "Krishan POS",
+  "description": "Modern Retail Point of Sale, Repair Tracker & Billing Software",
+  "start_url": "/index.html",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#4f46e5",
+  "orientation": "any",
+  "icons": [
+    {
+      "src": "/assets/icons/icon.svg",
+      "sizes": "192x192 512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/assets/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/assets/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "New Sale (Billing)",
+      "url": "/index.html#pos",
+      "description": "Quickly start a new bill"
+    },
+    {
+      "name": "Repairs & Job Cards",
+      "url": "/index.html#repairs",
+      "description": "Manage phone and electronic repairs"
+    },
+    {
+      "name": "Reload & Bank",
+      "url": "/index.html#reload",
+      "description": "Fast reload and cash transfer"
+    }
+  ],
+  "categories": ["business", "finance", "productivity", "utilities"]
+}
