@@ -78,11 +78,11 @@ app.use(cookieParser());
 
 // Serverless / Vercel path normalization
 app.use((req, res, next) => {
-    if (req.url === '/api/index.js' || req.url === '/api/index' || req.url === '/api') {
-        const originalUri = req.headers['x-forwarded-uri'] || req.originalUrl;
-        if (originalUri && originalUri.startsWith('/api')) {
-            req.url = originalUri;
-        }
+    const originalUri = req.headers['x-forwarded-uri'] || req.headers['x-matched-path'];
+    if (originalUri && originalUri.startsWith('/api')) {
+        req.url = originalUri;
+    } else if (req.url === '/api/index.js' || req.url === '/api/index' || req.url === '/api') {
+        if (originalUri) req.url = originalUri;
     }
     next();
 });
