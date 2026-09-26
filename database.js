@@ -4,7 +4,33 @@ const bcrypt = require('bcryptjs');
 require('dotenv').config();
 
 // ──────────────────────────────────────────────
-// SUPABASE CLOUD DATABASE CONFIGURATION (Optional Free Cloud DB)
+// APPWRITE CLOUD BACKEND CONFIGURATION
+// ──────────────────────────────────────────────
+const APPWRITE_ENDPOINT = (process.env.APPWRITE_ENDPOINT || 'https://nyc.cloud.appwrite.io/v1').trim();
+const APPWRITE_PROJECT_ID = (process.env.APPWRITE_PROJECT_ID || '').trim();
+const APPWRITE_API_KEY = (process.env.APPWRITE_API_KEY || '').trim();
+const APPWRITE_DATABASE_ID = (process.env.APPWRITE_DATABASE_ID || 'krishan_pos').trim();
+
+let appwriteClient = null;
+let appwriteDatabases = null;
+let appwriteActive = false;
+
+if (APPWRITE_PROJECT_ID && APPWRITE_API_KEY) {
+    try {
+        const { Client, Databases } = require('node-appwrite');
+        appwriteClient = new Client()
+            .setEndpoint(APPWRITE_ENDPOINT)
+            .setProject(APPWRITE_PROJECT_ID)
+            .setKey(APPWRITE_API_KEY);
+        appwriteDatabases = new Databases(appwriteClient);
+        console.log(`☁️ [Appwrite] Initialized Appwrite Cloud Client (${APPWRITE_ENDPOINT}, Project: ${APPWRITE_PROJECT_ID})`);
+    } catch (err) {
+        console.warn('⚠️ [Appwrite] Could not initialize Appwrite client:', err.message);
+    }
+}
+
+// ──────────────────────────────────────────────
+// SUPABASE CLOUD DATABASE CONFIGURATION (Optional Secondary Cloud DB)
 // ──────────────────────────────────────────────
 let rawSupabaseUrl = (process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || '').trim();
 if (rawSupabaseUrl) {
@@ -16,8 +42,7 @@ const SUPABASE_KEY = (process.env.SUPABASE_KEY || process.env.SUPABASE_ANON_KEY 
 let supabase = null;
 let cloudSyncActive = false;
 
-// Check if this is the defunct placeholder test domain to avoid DNS errors on startup
-const isPlaceholderSupabase = SUPABASE_URL.includes('dzuycbqcltmlrktiszby');
+const isPlaceholderSupabase = !SUPABASE_URL || SUPABASE_URL.includes('dzuycbqcltmlrktiszby');
 
 if (!isPlaceholderSupabase && SUPABASE_URL && SUPABASE_KEY && SUPABASE_URL.startsWith('http')) {
     try {
@@ -282,7 +307,7 @@ function initDatabase() {
     }
 
     // Verify Cloud DB status asynchronously
-    if (supabase) {
+    if (appwriteDatabases || supabase) {
         checkCloudConnection();
     } else {
         console.log('📦 [Database] Running in Local Storage Mode (SQLite)');
@@ -290,22 +315,39 @@ function initDatabase() {
 }
 
 async function checkCloudConnection() {
-    if (!supabase) return;
-    try {
-        const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('Connection timed out')), 1000));
-        const testQuery = supabase.from('users').select('id').limit(1);
-        const { error } = await Promise.race([testQuery, timeoutPromise]);
-        if (error) {
-            console.warn('ℹ️ [Cloud DB] Cloud DB not reachable, active in Local / Serverless mode:', error.message);
-            cloudSyncActive = false;
-        } else {
-            console.log('⚡ [Cloud DB] Supabase Cloud Database is ONLINE and synced.');
+    if (appwriteDatabases) {
+        try {
+            await appwriteDatabases.get(APPWRITE_DATABASE_ID);
+            console.log(`⚡ [Cloud DB] Appwrite Cloud Database (${APPWRITE_DATABASE_ID}) is ONLINE and Connected.`);
+            appwriteActive = true;
             cloudSyncActive = true;
-            await seedCloudIfEmpty();
+            return;
+        } catch (err) {
+            console.warn('ℹ️ [Appwrite] Cloud check notice:', err.message);
+            appwriteActive = false;
         }
-    } catch (err) {
-        console.warn('ℹ️ [Cloud DB] Cloud connection check finished (' + err.message + '). Active in Local / Serverless mode.');
-        cloudSyncActive = false;
+    }
+
+    if (supabase) {
+        try {
+            const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('Connection timed out')), 1000));
+            const testQuery = supabase.from('users').select('id').limit(1);
+            const { error } = await Promise.race([testQuery, timeoutPromise]);
+            if (error) {
+                console.warn('ℹ️ [Cloud DB] Supabase not reachable, active in Local / Serverless mode:', error.message);
+            } else {
+                console.log('⚡ [Cloud DB] Supabase Cloud Database is ONLINE and synced.');
+                cloudSyncActive = true;
+                await seedCloudIfEmpty();
+                return;
+            }
+        } catch (err) {
+            console.warn('ℹ️ [Cloud DB] Cloud connection check finished (' + err.message + '). Active in Local / Serverless mode.');
+        }
+    }
+
+    if (!appwriteActive) {
+        console.log('📦 [Database] Running in Local Storage Mode (SQLite / JSON Fallback)');
     }
 }
 

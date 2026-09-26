@@ -1772,7 +1772,7 @@ const app = {
             // 2. Verify authentication
             const isAuth = await app.checkAuth();
             if (!isAuth) {
-                app.showLoginOverlay();
+                window.location.href = 'login.html';
                 return;
             }
 
